@@ -1,0 +1,320 @@
+---
+title: ""
+author: ""
+date: ""
+output: 
+  pdf_document: 
+    fig_caption: yes
+  css: chloroplast_220608.css
+classoption: a4paper
+---
+
+\pagenumbering{gobble}
+
+```{r setting, include=F}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+
+# Load libraries
+library(cellssm)
+library(ggpubr)
+library(tidyverse)
+library(patchwork)
+library(scales)
+library(rmdformats)
+library(knitr)
+library(data.table)
+library(viridis)
+
+
+## Load data
+data("Paramecium")
+cell_list <- list(Paramecium)
+
+i = 1; j = 1
+```
+
+```{r Vis, fig.align="center", fig.dim=c(170/25.4, 140/25.4)}
+# X-axis min and max of shade
+shade_xmin <- min(cell_list[[i]]$time[cell_list[[i]]$ex == 0])
+shade_xmax <- max(cell_list[[i]]$time[cell_list[[i]]$ex == 0])
+zero_time <- (cell_list[[i]]$time[cell_list[[i]]$ex == 0])
+boundary1 <- zero_time[which(diff(zero_time) != 1)]
+boundary2 <- zero_time[which(diff(zero_time) != 1)+1]
+shade_xmin <- c(shade_xmin, boundary2)
+shade_xmax <- c(boundary1, shade_xmax)
+
+
+## Bayesian estimation
+df <- as.data.frame(fread(paste0("../19_paramecium_ssm_individual_stepwise=c(99, 90)/csv/ssm_individual_experiment", i, "_Paramecium", j, ".csv")))
+mvtime <- as.data.frame(fread("../19_paramecium_ssm_individual_stepwise=c(99, 90)/csv/ssm_individual_Paramecium_mvtime.csv"))
+
+    pred <- filter(mvtime, experiment==i & Paramecium == j)$start_time
+    
+    # Distance
+    ymax <- max(cell_list[[i]][,j+2])
+    ymin <- min(cell_list[[i]][,j+2])
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+    g_dist <- ggplot(data = cell_list[[i]]) +
+      annotate("rect", xmin = shade_xmin, xmax = shade_xmax,
+         ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+      geom_line(aes(x = time, y = cell_list[[i]][,j+2]), size=0.5) +
+      geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+      #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+      #geom_vline(xintercept = mv_time$end_time, linetype="dashed", col = "aquamarine3") +
+      #annotate("text", x=75, y=yceiling-yrange*0.08, label="Statistical", col="orange", size=7/ggplot2::.pt) +
+      #annotate("text", x=71.5, y=yceiling-yrange*0.2, label="Visual", col="aquamarine3", size=7/ggplot2::.pt) +
+      scale_x_continuous(expand = c(0,0)) +
+      scale_y_continuous(expand = c(0,0)) +
+      theme_bw(base_size = 7) +
+      theme(legend.position = "none",
+            plot.title = element_blank(),
+            axis.title=element_text(size=7),
+            axis.title.x=element_blank(),
+            axis.text = element_text(size = 7),
+            plot.tag = element_text(size = 12, face = "bold")) +
+      labs(y = expression(atop("Distance of Paramecium", paste("from heat ", (mm)))))
+    
+    
+    # Velocity
+    ymax <- 1.7
+    ymin <- -0.82
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+    g_velocity <- ggplot(data = df, aes(x = time)) +
+      annotate("rect", xmin = shade_xmin, xmax = shade_xmax,
+         ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+      geom_ribbon(aes(ymin = `alpha_0.5%`, ymax = `alpha_99.5%`), alpha = 0.5) +
+      geom_line(aes(y = `alpha_50%`), size = 0.5) +
+      geom_point(aes(y = Y), alpha = 0.5, size=0.5) +
+      geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+      #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+      geom_hline(yintercept = 0, linetype="dashed") +
+      #geom_vline(xintercept = mv_time$end_time, linetype="dashed", col = "aquamarine3") +
+      #annotate("text", x=70, y=yceiling-yrange*0.08, label="Visual", col="orange", size=7/ggplot2::.pt) +
+      #annotate("text", x=75, y=yceiling-yrange*0.2, label="Statistical", col="aquamarine3", size=7/ggplot2::.pt) +
+      scale_x_continuous(expand = c(0,0)) +
+      scale_y_continuous(expand = c(0,0)) +
+      theme_bw(base_size = 7) +
+      theme(legend.position = "none",
+            axis.title=element_text(size=7),
+            axis.title.x=element_blank(),
+            axis.text = element_text(size = 7),
+            plot.title = element_blank(),
+            plot.tag = element_text(size = 12, face = "bold")) +
+      labs(y = expression(atop("Velocity of movement", paste((mm/sec)))))
+    
+    
+    # beta_heat
+    ymax <- 1.4
+    ymin <- -0.4
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+    g_b_heat <- ggplot(data = df, aes(x = time)) +
+      annotate("rect", xmin = shade_xmin, xmax = shade_xmax,
+         ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+      geom_ribbon(aes(ymin = `b_ex_0.5%`, ymax = `b_ex_99.5%`), alpha = 0.5) +
+      geom_line(aes(y = `b_ex_50%`), size = 0.5) +
+      geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+      #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+      geom_hline(yintercept = 0, linetype="dashed") +
+      #geom_vline(xintercept = mv_time$end_time, linetype="dashed", col = "aquamarine3") +
+      #annotate("text", x=70, y=yceiling-yrange*0.08, label="Visual", col="orange", size=7/ggplot2::.pt) +
+      #annotate("text", x=75, y=yceiling-yrange*0.2, label="Statistical", col="aquamarine3", size=7/ggplot2::.pt) +
+      scale_x_continuous(expand = c(0,0)) +
+      scale_y_continuous(expand = c(0,0)) +
+      theme_bw(base_size = 7) +
+      theme(legend.position = "none",
+            axis.title=element_text(size=7),
+            axis.title.x=element_blank(),
+            axis.text = element_text(size = 7),
+            plot.title = element_blank(),
+            plot.tag = element_text(size = 12, face = "bold")) +
+      labs(y = expression(atop("Coefficient of heat", paste((mm/sec)))))
+    
+    
+    # Random fluctuations
+    ymax <- max(df$`w_99.5%`)
+    ymin <- min(df$`w_0.5%`)
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+    g_w <- ggplot(data = df, aes(x = time)) +
+      annotate("rect", xmin = shade_xmin, xmax = shade_xmax,
+         ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+      geom_ribbon(aes(ymin = `w_0.5%`, ymax = `w_99.5%`), alpha = 0.5) +
+      geom_line(aes(y = `w_50%`), size = 0.5) +
+      geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+      #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+      geom_hline(yintercept = 0, linetype="dashed") +
+      #geom_vline(xintercept = mv_time$end_time, linetype="dashed", col = "aquamarine3") +
+      #annotate("text", x=70, y=yceiling-yrange*0.08, label="Visual", col="orange", size=7/ggplot2::.pt) +
+      #annotate("text", x=75, y=yceiling-yrange*0.2, label="Statistical", col="aquamarine3", size=7/ggplot2::.pt) +
+      scale_x_continuous(expand = c(0,0)) +
+      scale_y_continuous(expand = c(0,0)) +
+      theme_bw(base_size = 7) +
+      theme(legend.position = "none",
+            axis.title=element_text(size=7),
+            axis.text = element_text(size = 7),
+            plot.title = element_blank(),
+            plot.tag = element_text(size = 12, face = "bold")) +
+      labs(x = "Time (min)", 
+           y = expression(atop("Random fluctuations", paste((mm/sec)))))
+
+    
+    
+    
+
+### Kalman filter
+df <- as.data.frame(fread(paste0("../20_paramecium_ssm_KFAS_stepwise=c(99, 90)/csv/ssm_KFAS_experiment", i, "_Paramecium", j, ".csv")))
+mvtime <- as.data.frame(fread("../20_paramecium_ssm_KFAS_stepwise=c(99, 90)/csv/ssm_KFAS_Paramecium_mvtime.csv"))
+
+    #vis <- filter(visual, experiment==i & index == j)$time
+    pred <- filter(mvtime, experiment==i & Paramecium == j)$start_time
+    
+    # Distance
+    ymax <- max(cell_list[[i]][,j+2])
+    ymin <- min(cell_list[[i]][,j+2])
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+    g_dist_KF <- ggplot(data = cell_list[[i]]) +
+      annotate("rect", xmin = shade_xmin, xmax = shade_xmax,
+         ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+      geom_line(aes(x = time, y = cell_list[[i]][,j+2]), size=0.5) +
+      geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+      #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+      #geom_vline(xintercept = mv_time$end_time, linetype="dashed", col = "aquamarine3") +
+      #annotate("text", x=75, y=yceiling-yrange*0.08, label="Statistical", col="orange", size=7/ggplot2::.pt) +
+      #annotate("text", x=71.5, y=yceiling-yrange*0.2, label="Visual", col="aquamarine3", size=7/ggplot2::.pt) +
+      scale_x_continuous(expand = c(0,0)) +
+      scale_y_continuous(expand = c(0,0)) +
+      theme_bw(base_size = 7) +
+      theme(legend.position = "none",
+            plot.title = element_blank(),
+            axis.title=element_text(size=7),
+            axis.title.x=element_blank(),
+            axis.text = element_text(size = 7),
+            plot.tag = element_text(size = 12, face = "bold")) +
+      labs(y = expression(atop("Distance of Paramecium", paste("from heat ", (mm)))))
+    
+    # Velocity
+    ymax <- 1.7
+    ymin <- -0.82
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+    g_velocity_KF <- ggplot(data = df, aes(x = time)) +
+      annotate("rect", xmin = shade_xmin, xmax = shade_xmax,
+         ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+      geom_ribbon(aes(ymin = `alpha_0.5%`, ymax = `alpha_99.5%`), alpha = 0.5) +
+      geom_line(aes(y = `alpha_50%`), size = 0.5) +
+      geom_point(aes(y = Y), alpha = 0.5, size=0.5) +
+      geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+      #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+      geom_hline(yintercept = 0, linetype="dashed") +
+      #geom_vline(xintercept = mv_time$end_time, linetype="dashed", col = "aquamarine3") +
+      #annotate("text", x=70, y=yceiling-yrange*0.08, label="Visual", col="orange", size=7/ggplot2::.pt) +
+      #annotate("text", x=75, y=yceiling-yrange*0.2, label="Statistical", col="aquamarine3", size=7/ggplot2::.pt) +
+      scale_x_continuous(expand = c(0,0)) +
+      scale_y_continuous(expand = c(0,0)) +
+      theme_bw(base_size = 7) +
+      theme(legend.position = "none",
+            axis.title=element_text(size=7),
+            axis.title.x=element_blank(),
+            axis.text = element_text(size = 7),
+            plot.title = element_blank(),
+            plot.tag = element_text(size = 12, face = "bold")) +
+      labs(y = expression(atop("Velocity of movement", paste((mm/sec)))))
+    
+    # beta_heat
+    ymax <- 1.4
+    ymin <- -0.4
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+    g_b_heat_KF <- ggplot(data = df, aes(x = time)) +
+      annotate("rect", xmin = shade_xmin, xmax = shade_xmax,
+         ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+      geom_ribbon(aes(ymin = `b_ex_0.5%`, ymax = `b_ex_99.5%`), alpha = 0.5) +
+      geom_line(aes(y = `b_ex_50%`), size = 0.5) +
+      geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+      #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+      geom_hline(yintercept = 0, linetype="dashed") +
+      #geom_vline(xintercept = mv_time$end_time, linetype="dashed", col = "aquamarine3") +
+      #annotate("text", x=70, y=yceiling-yrange*0.08, label="Visual", col="orange", size=7/ggplot2::.pt) +
+      #annotate("text", x=75, y=yceiling-yrange*0.2, label="Statistical", col="aquamarine3", size=7/ggplot2::.pt) +
+      scale_x_continuous(expand = c(0,0)) +
+      scale_y_continuous(expand = c(0,0)) +
+      theme_bw(base_size = 7) +
+      theme(legend.position = "none",
+            axis.title=element_text(size=7),
+            axis.title.x=element_blank(),
+            axis.text = element_text(size = 7),
+            plot.title = element_blank(),
+            plot.tag = element_text(size = 12, face = "bold")) +
+      labs(
+           #x = "Time (min)", 
+           y = expression(atop("Coefficient of heat", paste((mm/sec)))))
+  
+    
+    
+    
+    
+### No model
+mvtime <- as.data.frame(fread("../21_paramecium_nomodel/nomodel_Paramecium_mvtime.csv"))
+
+    #vis <- filter(visual, experiment==i & index == j)$time
+    pred <- filter(mvtime, experiment==i & Paramecium == j)$start_time
+    
+    ymax <- max(cell_list[[i]][,j+2])
+    ymin <- min(cell_list[[i]][,j+2])
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+  g_dist_NM <- ggplot(data = cell_list[[i]]) +
+    annotate("rect", xmin = shade_xmin, xmax = shade_xmax,
+       ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+    geom_line(aes(x = time, y = cell_list[[i]][,j+2]), size=0.5) +
+    geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+    #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+    #annotate("text", x=71.5, y=yceiling-yrange*0.2, label="Visual", col="aquamarine3", size=7/ggplot2::.pt) +
+    #annotate("text", x=75, y=yceiling-yrange*0.08, label="Statistical", col="orange", size=7/ggplot2::.pt) +
+    scale_x_continuous(expand = c(0,0)) +
+    scale_y_continuous(expand = c(0,0)) +
+    theme_bw(base_size = 7) +
+    theme(legend.position = "none",
+          axis.title=element_text(size=7),
+          axis.text = element_text(size = 7),
+          plot.title = element_text(size = 7, face = "bold"),
+          plot.tag = element_text(size = 12, face = "bold")) +
+    labs(
+      #title = paste(cell_name, ", Paramecium ", Paramecium, sep=""),
+         x = "Time (min)", 
+         y = expression(atop("Distance of Paramecium", paste("from heat ", (mm)))))
+    
+
+
+### Integration of all plots into a figure
+void <- ggplot() + theme_void()
+
+{(g_dist + labs(tag = "A")) + void + g_velocity + void + 
+    g_b_heat + void + g_w + void + 
+    plot_layout(ncol = 2, widths = c(1,0.05))} |
+{(g_dist_KF + labs(tag = "B")) + void + g_velocity_KF + void + 
+    g_b_heat_KF + void + g_dist_NM + void + 
+    plot_layout(ncol = 2, widths = c(1,0.05))}
+
+```
+

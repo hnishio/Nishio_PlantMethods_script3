@@ -1,0 +1,302 @@
+---
+title: ""
+author: ""
+date: ""
+output: 
+  pdf_document: 
+    fig_caption: yes
+  css: chloroplast_220608.css
+classoption: a4paper
+---
+
+\pagenumbering{gobble}
+
+```{r setting, include=F}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+
+# Load libraries
+library(cellssm)
+library(ggpubr)
+library(tidyverse)
+library(patchwork)
+library(scales)
+library(rmdformats)
+library(knitr)
+library(data.table)
+library(viridis)
+
+
+## Load data
+cell1 <- read.csv("../data/nucleus1.csv")
+cell2 <- read.csv("../data/nucleus2.csv")
+
+cell_list <- list(cell1, cell2)
+
+i = 2; j = 1
+```
+
+```{r Vis, fig.align="center", fig.dim=c(170/25.4, 140/25.4)}
+## Bayesian estimation
+df <- as.data.frame(fread(paste0("../16_nucleus_ssm_individual_stepwise=c(99, 90)/csv/ssm_individual_cell", i, "_nucleus", j, ".csv")))
+mvtime <- as.data.frame(fread("../16_nucleus_ssm_individual_stepwise=c(99, 90)/csv/ssm_individual_nucleus_mvtime.csv"))
+
+    pred <- filter(mvtime, cell==i & nucleus == j)$start_time
+    
+    # Distance
+    ymax <- max(cell_list[[i]][,j+2])
+    ymin <- min(cell_list[[i]][,j+2])
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+    g_dist <- ggplot(data = cell_list[[i]]) +
+      annotate("rect", xmin = -29, xmax = 0, ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+      geom_line(aes(x = time, y = cell_list[[i]][,j+2]), size=0.5) +
+      geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+      #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+      #geom_vline(xintercept = mv_time$end_time, linetype="dashed", col = "aquamarine3") +
+      #annotate("text", x=75, y=yceiling-yrange*0.08, label="Statistical", col="orange", size=7/ggplot2::.pt) +
+      #annotate("text", x=71.5, y=yceiling-yrange*0.2, label="Visual", col="aquamarine3", size=7/ggplot2::.pt) +
+      scale_x_continuous(expand = c(0,0)) +
+      scale_y_continuous(expand = c(0,0)) +
+      theme_bw(base_size = 7) +
+      theme(legend.position = "none",
+            plot.title = element_blank(),
+            axis.title=element_text(size=7),
+            axis.title.x=element_blank(),
+            axis.text = element_text(size = 7),
+            plot.tag = element_text(size = 12, face = "bold")) +
+      labs(y = expression(atop("Distance of nucleus", paste("from microbeam ", (mu*m)))))
+    
+    
+    # Velocity
+    ymax <- 0.6
+    ymin <- -0.82
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+    g_velocity <- ggplot(data = df, aes(x = time)) +
+      annotate("rect", xmin = -29, xmax = 0, ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+      geom_ribbon(aes(ymin = `alpha_0.5%`, ymax = `alpha_99.5%`), alpha = 0.5) +
+      geom_line(aes(y = `alpha_50%`), size = 0.5) +
+      geom_point(aes(y = Y), alpha = 0.5, size=0.5) +
+      geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+      #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+      geom_hline(yintercept = 0, linetype="dashed") +
+      #geom_vline(xintercept = mv_time$end_time, linetype="dashed", col = "aquamarine3") +
+      #annotate("text", x=70, y=yceiling-yrange*0.08, label="Visual", col="orange", size=7/ggplot2::.pt) +
+      #annotate("text", x=75, y=yceiling-yrange*0.2, label="Statistical", col="aquamarine3", size=7/ggplot2::.pt) +
+      scale_x_continuous(expand = c(0,0)) +
+      scale_y_continuous(expand = c(0,0)) +
+      theme_bw(base_size = 7) +
+      theme(legend.position = "none",
+            axis.title=element_text(size=7),
+            axis.title.x=element_blank(),
+            axis.text = element_text(size = 7),
+            plot.title = element_blank(),
+            plot.tag = element_text(size = 12, face = "bold")) +
+      labs(y = expression(atop("Velocity of movement", paste((mu*m/min)))))
+    
+    
+    # beta_microbeam
+    ymax <- 0.18
+    ymin <- -0.4
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+    g_b_microbeam <- ggplot(data = df, aes(x = time)) +
+      annotate("rect", xmin = -29, xmax = 0, ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+      geom_ribbon(aes(ymin = `b_ex_0.5%`, ymax = `b_ex_99.5%`), alpha = 0.5) +
+      geom_line(aes(y = `b_ex_50%`), size = 0.5) +
+      geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+      #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+      geom_hline(yintercept = 0, linetype="dashed") +
+      #geom_vline(xintercept = mv_time$end_time, linetype="dashed", col = "aquamarine3") +
+      #annotate("text", x=70, y=yceiling-yrange*0.08, label="Visual", col="orange", size=7/ggplot2::.pt) +
+      #annotate("text", x=75, y=yceiling-yrange*0.2, label="Statistical", col="aquamarine3", size=7/ggplot2::.pt) +
+      scale_x_continuous(expand = c(0,0)) +
+      scale_y_continuous(expand = c(0,0)) +
+      theme_bw(base_size = 7) +
+      theme(legend.position = "none",
+            axis.title=element_text(size=7),
+            axis.title.x=element_blank(),
+            axis.text = element_text(size = 7),
+            plot.title = element_blank(),
+            plot.tag = element_text(size = 12, face = "bold")) +
+      labs(y = expression(atop("Coefficient of microbeam", paste((mu*m/min)))))
+    
+    
+    # Random fluctuations
+    ymax <- max(df$`w_99.5%`)
+    ymin <- min(df$`w_0.5%`)
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+    g_w <- ggplot(data = df, aes(x = time)) +
+      annotate("rect", xmin = -29, xmax = 0, ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+      geom_ribbon(aes(ymin = `w_0.5%`, ymax = `w_99.5%`), alpha = 0.5) +
+      geom_line(aes(y = `w_50%`), size = 0.5) +
+      geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+      #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+      geom_hline(yintercept = 0, linetype="dashed") +
+      #geom_vline(xintercept = mv_time$end_time, linetype="dashed", col = "aquamarine3") +
+      #annotate("text", x=70, y=yceiling-yrange*0.08, label="Visual", col="orange", size=7/ggplot2::.pt) +
+      #annotate("text", x=75, y=yceiling-yrange*0.2, label="Statistical", col="aquamarine3", size=7/ggplot2::.pt) +
+      scale_x_continuous(expand = c(0,0)) +
+      scale_y_continuous(expand = c(0,0)) +
+      theme_bw(base_size = 7) +
+      theme(legend.position = "none",
+            axis.title=element_text(size=7),
+            axis.text = element_text(size = 7),
+            plot.title = element_blank(),
+            plot.tag = element_text(size = 12, face = "bold")) +
+      labs(x = "Time (min)", 
+           y = expression(atop("Random fluctuations", paste((mu*m/min)))))
+
+    
+    
+    
+
+### Kalman filter
+df <- as.data.frame(fread(paste0("../17_nucleus_ssm_KFAS_stepwise=c(99, 90)/csv/ssm_KFAS_cell", i, "_nucleus", j, ".csv")))
+mvtime <- as.data.frame(fread("../17_nucleus_ssm_KFAS_stepwise=c(99, 90)/csv/ssm_KFAS_nucleus_mvtime.csv"))
+
+    #vis <- filter(visual, cell==i & index == j)$time
+    pred <- filter(mvtime, cell==i & nucleus == j)$start_time
+    
+    # Distance
+    ymax <- max(cell_list[[i]][,j+2])
+    ymin <- min(cell_list[[i]][,j+2])
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+    g_dist_KF <- ggplot(data = cell_list[[i]]) +
+      annotate("rect", xmin = -29, xmax = 0, ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+      geom_line(aes(x = time, y = cell_list[[i]][,j+2]), size=0.5) +
+      geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+      #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+      #geom_vline(xintercept = mv_time$end_time, linetype="dashed", col = "aquamarine3") +
+      #annotate("text", x=75, y=yceiling-yrange*0.08, label="Statistical", col="orange", size=7/ggplot2::.pt) +
+      #annotate("text", x=71.5, y=yceiling-yrange*0.2, label="Visual", col="aquamarine3", size=7/ggplot2::.pt) +
+      scale_x_continuous(expand = c(0,0)) +
+      scale_y_continuous(expand = c(0,0)) +
+      theme_bw(base_size = 7) +
+      theme(legend.position = "none",
+            plot.title = element_blank(),
+            axis.title=element_text(size=7),
+            axis.title.x=element_blank(),
+            axis.text = element_text(size = 7),
+            plot.tag = element_text(size = 12, face = "bold")) +
+      labs(y = expression(atop("Distance of nucleus", paste("from microbeam ", (mu*m)))))
+    
+    # Velocity
+    ymax <- 0.6
+    ymin <- -0.82
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+    g_velocity_KF <- ggplot(data = df, aes(x = time)) +
+      annotate("rect", xmin = -29, xmax = 0, ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+      geom_ribbon(aes(ymin = `alpha_0.5%`, ymax = `alpha_99.5%`), alpha = 0.5) +
+      geom_line(aes(y = `alpha_50%`), size = 0.5) +
+      geom_point(aes(y = Y), alpha = 0.5, size=0.5) +
+      geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+      #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+      geom_hline(yintercept = 0, linetype="dashed") +
+      #geom_vline(xintercept = mv_time$end_time, linetype="dashed", col = "aquamarine3") +
+      #annotate("text", x=70, y=yceiling-yrange*0.08, label="Visual", col="orange", size=7/ggplot2::.pt) +
+      #annotate("text", x=75, y=yceiling-yrange*0.2, label="Statistical", col="aquamarine3", size=7/ggplot2::.pt) +
+      scale_x_continuous(expand = c(0,0)) +
+      scale_y_continuous(expand = c(0,0)) +
+      theme_bw(base_size = 7) +
+      theme(legend.position = "none",
+            axis.title=element_text(size=7),
+            axis.title.x=element_blank(),
+            axis.text = element_text(size = 7),
+            plot.title = element_blank(),
+            plot.tag = element_text(size = 12, face = "bold")) +
+      labs(y = expression(atop("Velocity of movement", paste((mu*m/min)))))
+    
+    # beta_microbeam
+    ymax <- 0.18
+    ymin <- -0.4
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+    g_b_microbeam_KF <- ggplot(data = df, aes(x = time)) +
+      annotate("rect", xmin = -29, xmax = 0, ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+      geom_ribbon(aes(ymin = `b_ex_0.5%`, ymax = `b_ex_99.5%`), alpha = 0.5) +
+      geom_line(aes(y = `b_ex_50%`), size = 0.5) +
+      geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+      #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+      geom_hline(yintercept = 0, linetype="dashed") +
+      #geom_vline(xintercept = mv_time$end_time, linetype="dashed", col = "aquamarine3") +
+      #annotate("text", x=70, y=yceiling-yrange*0.08, label="Visual", col="orange", size=7/ggplot2::.pt) +
+      #annotate("text", x=75, y=yceiling-yrange*0.2, label="Statistical", col="aquamarine3", size=7/ggplot2::.pt) +
+      scale_x_continuous(expand = c(0,0)) +
+      scale_y_continuous(expand = c(0,0)) +
+      theme_bw(base_size = 7) +
+      theme(legend.position = "none",
+            axis.title=element_text(size=7),
+            axis.title.x=element_blank(),
+            axis.text = element_text(size = 7),
+            plot.title = element_blank(),
+            plot.tag = element_text(size = 12, face = "bold")) +
+      labs(
+           #x = "Time (min)", 
+           y = expression(atop("Coefficient of microbeam", paste((mu*m/min)))))
+  
+    
+    
+    
+    
+### No model
+mvtime <- as.data.frame(fread("../18_nucleus_nomodel/nomodel_nucleus_mvtime.csv"))
+
+    #vis <- filter(visual, cell==i & index == j)$time
+    pred <- filter(mvtime, cell==i & nucleus == j)$start_time
+    
+    ymax <- max(cell_list[[i]][,j+2])
+    ymin <- min(cell_list[[i]][,j+2])
+    yrange <- (ymax - ymin)
+    yceiling <-  ymax + yrange * 0.05
+    yfloor <- ymin - yrange * 0.05
+    
+  g_dist_NM <- ggplot(data = cell_list[[i]]) +
+    annotate("rect", xmin = -29, xmax = 0, ymin = yfloor, ymax = yceiling, alpha = 0.3, fill = "gray50") +
+    geom_line(aes(x = time, y = cell_list[[i]][,j+2]), size=0.5) +
+    geom_vline(xintercept = pred, linetype="solid", col = "orange") +
+    #geom_vline(xintercept = vis, linetype="dashed", col = "aquamarine3") +
+    #annotate("text", x=71.5, y=yceiling-yrange*0.2, label="Visual", col="aquamarine3", size=7/ggplot2::.pt) +
+    #annotate("text", x=75, y=yceiling-yrange*0.08, label="Statistical", col="orange", size=7/ggplot2::.pt) +
+    scale_x_continuous(expand = c(0,0)) +
+    scale_y_continuous(expand = c(0,0)) +
+    theme_bw(base_size = 7) +
+    theme(legend.position = "none",
+          axis.title=element_text(size=7),
+          axis.text = element_text(size = 7),
+          plot.title = element_text(size = 7, face = "bold"),
+          plot.tag = element_text(size = 12, face = "bold")) +
+    labs(
+      #title = paste(cell_name, ", nucleus ", nucleus, sep=""),
+         x = "Time (min)", 
+         y = expression(atop("Distance of nucleus", paste("from microbeam ", (mu*m)))))
+    
+
+
+### Integration of all plots into a figure
+void <- ggplot() + theme_void()
+
+{(g_dist + labs(tag = "A")) + g_velocity + g_b_microbeam + g_w +
+    plot_layout(ncol = 1)} |
+{(g_dist_KF + labs(tag = "B")) + g_velocity_KF + g_b_microbeam_KF + 
+    g_dist_NM + plot_layout(ncol = 1)}
+
+```
+

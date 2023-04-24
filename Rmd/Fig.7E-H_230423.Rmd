@@ -1,0 +1,209 @@
+---
+title: ""
+author: ""
+date: ""
+output: 
+  pdf_document: 
+    fig_caption: yes
+  css: chloroplast_220608.css
+classoption: a4paper
+---
+
+\pagenumbering{gobble}
+
+```{r setting, include=F}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+
+# Load libraries
+library(cellssm)
+library(ggpubr)
+library(tidyverse)
+library(patchwork)
+library(scales)
+library(rmdformats)
+library(knitr)
+library(data.table)
+library(viridis)
+
+# Load plot function
+source("../functions/Plot_functions.R")
+
+## Load data
+cell1 <- read.csv("../data/WT_cell1_v4.csv")
+cell2 <- read.csv("../data/cell2.csv")
+cell3 <- read.csv("../data/cell3.csv")
+cell4 <- read.csv("../data/cell4.csv")
+cell5 <- read.csv("../data/WT_cell5_v3.csv")
+cell6 <- read.csv("../data/WT_cell6_v3.csv")
+cell7 <- read.csv("../data/WT_cell7_v3.csv")
+cell8 <- read.csv("../data/WT_cell8_v3.csv")
+cell9 <- read.csv("../data/WT_cell9_v3.csv")
+cell_list <- list(cell1, cell2, cell3, cell4, cell5, cell6, cell7, cell8, cell9)
+
+```
+
+```{r Vis, fig.align="center", fig.dim=c(170/25.4, 240/25.4)}
+
+ymax_dis_all <- NULL
+ymin_dis_all <- NULL
+ymax_vel_all <- NULL
+ymin_vel_all <- NULL
+ymax_b_ex_all <- NULL
+ymin_b_ex_all <- NULL
+ymax_w_all <- NULL
+ymin_w_all <- NULL
+
+for(i in 1:length(cell_list)){
+dfs <- as.data.frame(fread(file = paste0("../15_ssm_common/csv/ssm_common_cell", i, ".csv")))
+
+ymax_dis <- max(dfs$`dist_97.5%`)
+ymax_dis_all <- cbind(ymax_dis_all, ymax_dis)
+ymin_dis <- min(dfs$`dist_2.5%`)
+ymin_dis_all <- cbind(ymin_dis_all, ymin_dis)
+
+ymax_vel <- max(dfs$`alpha_97.5%`)
+ymax_vel_all <- cbind(ymax_vel_all, ymax_vel)
+ymin_vel <- min(dfs$`alpha_2.5%`)
+ymin_vel_all <- cbind(ymin_vel_all, ymin_vel)
+
+ymax_b_ex <- max(dfs$`b_ex_97.5%`, na.rm = T)
+ymax_b_ex_all <- cbind(ymax_b_ex_all, ymax_b_ex)
+ymin_b_ex <- min(dfs$`b_ex_2.5%`, na.rm = T)
+ymin_b_ex_all <- cbind(ymin_b_ex_all, ymin_b_ex)
+
+ymax_w <- max(dfs$`w_97.5%`)
+ymax_w_all <- cbind(ymax_w_all, ymax_w)
+ymin_w <- min(dfs$`w_2.5%`)
+ymin_w_all <- cbind(ymin_w_all, ymin_w)
+
+}
+
+for(i in 5:8){
+
+
+dfs <- as.data.frame(fread(file = paste0("../15_ssm_common/csv/ssm_common_cell", i, ".csv")))
+
+
+##### Plotting #####
+
+# Distance
+ymax_dis <- max(ymax_dis_all)
+ymin_dis <- min(ymin_dis_all)
+yrange_dis <- (ymax_dis - ymin_dis)
+yceiling_dis <-  ymax_dis + yrange_dis * 0.05
+yfloor_dis <- ymin_dis - yrange_dis * 0.05
+
+g_state <- ggplot(data = dfs, aes(x = time)) +
+  annotate("rect", xmin = -29, xmax = 0, ymin = yfloor_dis, ymax = yceiling_dis, alpha = 0.3, fill = "gray50") +
+  geom_ribbon(aes(ymin = `dist_2.5%`, ymax = `dist_97.5%`), alpha = 0.5) +
+  geom_line(aes(y = `dist_50%`), size=0.5) +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_bw(base_size = 7) +
+  theme(legend.position = "none",
+        axis.title=element_text(size=7),
+        axis.title.x=element_blank(),
+        axis.text = element_text(size = 7),
+        plot.title = element_blank(),
+        plot.tag = element_text(size = 12, face = "bold")) +
+  labs(y = expression(atop("Distance of\nchloroplast from", paste("microbeam ", (mu*m)))))
+
+# Velocity
+ymax_vel <- max(ymax_vel_all)
+ymin_vel <- min(ymin_vel_all)
+yrange_vel <- (ymax_vel - ymin_vel)
+yceiling_vel <-  ymax_vel + yrange_vel * 0.05
+yfloor_vel <- ymin_vel - yrange_vel * 0.05
+
+g_velocity <- ggplot(data = dfs, aes(x = time)) +
+  annotate("rect", xmin = -29, xmax = 0, ymin = yfloor_vel, ymax = yceiling_vel, alpha = 0.3, fill = "gray50") +
+  geom_ribbon(aes(ymin = `alpha_2.5%`, ymax = `alpha_97.5%`), alpha = 0.5) +
+  geom_line(aes(y = `alpha_50%`), size = 0.5) +
+  geom_hline(yintercept = 0, linetype="dashed") +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_bw(base_size = 7) +
+  theme(legend.position = "none",
+        axis.title=element_text(size=7),
+        axis.title.x=element_blank(),
+        axis.text = element_text(size = 7),
+        plot.title = element_blank()) +
+  labs(y = expression(atop("Velocity of\nmovement", paste((mu*m/min)))))
+
+# beta_ex
+ymax_b <- max(ymax_b_ex_all)
+ymin_b <- min(ymin_b_ex_all)
+yrange_b <- (ymax_b - ymin_b)
+yceiling_b <-  ymax_b + yrange_b * 0.05
+yfloor_b <- ymin_b - yrange_b * 0.05
+
+g_b_ex <- ggplot(data = dfs, aes(x = time)) +
+  annotate("rect", xmin = -29, xmax = 0, ymin = yfloor_b, ymax = yceiling_b, alpha = 0.3, fill = "gray50") +
+  geom_ribbon(aes(ymin = `b_ex_2.5%`, ymax = `b_ex_97.5%`), alpha = 0.5) +
+  geom_line(aes(y = `b_ex_50%`), size = 0.5) +
+  geom_hline(yintercept = 0, linetype="dashed") +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_bw(base_size = 7) +
+  theme(legend.position = "none",
+        axis.title=element_text(size=7),
+        axis.title.x=element_blank(),
+        axis.text = element_text(size = 7),
+        plot.title = element_blank()) +
+  labs(y = expression(atop("Coefficient of\nmicrobeam", paste((mu*m/min)))))
+
+# Random fluctuations
+ymax_w <- max(ymax_w_all)
+ymin_w <- min(ymin_w_all)
+yrange_w <- (ymax_w - ymin_w)
+yceiling_w <-  ymax_w + yrange_w * 0.05
+yfloor_w <- ymin_w - yrange_w * 0.05
+
+g_w <- ggplot(data = dfs, aes(x = time)) +
+  annotate("rect", xmin = -29, xmax = 0, ymin = yfloor_w, ymax = yceiling_w, alpha = 0.3, fill = "gray50") +
+  geom_ribbon(aes(ymin = `w_2.5%`, ymax = `w_97.5%`), alpha = 0.5) +
+  geom_line(aes(y = `w_50%`), size = 0.5) +
+  geom_hline(yintercept = 0, linetype="dashed") +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_bw(base_size = 7) +
+  theme(legend.position = "none",
+        axis.title=element_text(size=7),
+        axis.text = element_text(size = 7),
+        plot.title = element_blank()) +
+  labs(x = "Time (min)", 
+       y = expression(atop("Random\nfluctuations", paste((mu*m/min)))))
+
+# Integrate plots
+eval(parse(text = paste0("
+g", i, " <- list(g_state, g_velocity, g_b_ex, g_w)"
+)))
+
+}
+
+
+
+### Integration of all plots into a figure
+void <- ggplot() + theme_void()
+
+{void +
+{(g5[[1]] + labs(tag = "E")) + g5[[2]] + g5[[3]] + g5[[4]] + (g7[[1]] + labs(tag = "G")) + g7[[2]] + g7[[3]] + g7[[4]] + plot_layout(ncol = 1)} +
+void +
+{(g6[[1]] + labs(tag = "F")) + g6[[2]] + g6[[3]] + g6[[4]] + (g8[[1]] + labs(tag = "H")) + g8[[2]] + g8[[3]] + g8[[4]] + plot_layout(ncol = 1)} + 
+void + 
+plot_layout(ncol = 5, widths = c(0,1,0.05,1,0))}
+
+# {void +
+#   (g_vispred + labs(tag = "D")) + g_vispred_KF + g_vispred_NM +
+#     (g_calc  + labs(tag = "E")) + void +
+#     plot_layout(nrow = 1, widths = c(0, 1,1,1,1.8, 0))} +
+# plot_layout(nrow = 2, heights = c(4.7,1))
+# 
+# (g1[[1]] | g2) / (g3 | g4)
+# 
+# plot_annotation(title = 'Cell ", i, "',
+#                   theme = theme(plot.title = element_text(size = 7, face = 'bold'))) +
+#   plot_layout(ncol = 1, heights = c(1, 1, 1, 1))
+
+```
+
