@@ -45,7 +45,7 @@ medsig <- median(c(lm_cell1$coefficients[2], lm_cell2$coefficients[2], lm_cell3$
                    lm_cell7$coefficients[2], lm_cell8$coefficients[2], lm_cell9$coefficients[2]))
 ## medsig: 0.7716529
 
-## Signaling time vs. Total reaction time
+## Signal transfer time vs. Total reaction time
 # for(i in 1:9){
 #   eval(parse(text = paste0("
 #     signaling_time_cell", i, " <- mvtime[mvtime$cell==", i, ",]$distance / lm_cell", i, "$coefficients[2]
@@ -89,7 +89,7 @@ df_cat_signaling <- data.frame(
                   length(start_time_cell1)+length(start_time_cell2)+length(start_time_cell3)+
                     length(start_time_cell4)+length(start_time_cell5)+length(start_time_cell6)+
                     length(start_time_cell7)+length(start_time_cell8)+length(start_time_cell9)), 
-              rep("Signaling time", 
+              rep("Signal transfer time", 
                   length(signaling_time_cell1)+length(signaling_time_cell2)+length(signaling_time_cell3)+
                     length(signaling_time_cell4)+length(signaling_time_cell5)+length(signaling_time_cell6)+
                     length(signaling_time_cell7)+length(signaling_time_cell8)+length(signaling_time_cell9))),
@@ -99,7 +99,7 @@ df_cat_signaling <- data.frame(
          signaling_time_cell1, signaling_time_cell2, signaling_time_cell3, 
          signaling_time_cell4, signaling_time_cell5, signaling_time_cell6,
          signaling_time_cell7, signaling_time_cell8, signaling_time_cell9))
-df_cat_signaling$STorSIG <- factor(df_cat_signaling$STorSIG, levels=c("Signaling time", "Total reaction time"))
+df_cat_signaling$STorSIG <- factor(df_cat_signaling$STorSIG, levels=c("Signal transfer time", "Total reaction time"))
 
 ## Wilcoxon test
 #wilcox.exact(signaling_time_cell2, start_time_cell2, "less", paired = T)
@@ -112,7 +112,7 @@ g_sig_st <- ggplot(df_cat_signaling, aes(x = cell, y = time, fill = STorSIG)) +
   geom_point(size = 0.1, alpha = 0.5, position=position_jitterdodge()) +
   scale_fill_manual(values=c("darkturquoise", "gray70"))+
   coord_cartesian(ylim = c(0, 57), clip = "off") +
-  annotate("text", x = 5, y = 57, label="Hypothesis: signaling time < total reaction time", size = 7/ggplot2::.pt) +
+  annotate("text", x = 5, y = 57, label="Hypothesis: signal transfer time < total reaction time", size = 7/ggplot2::.pt) +
   annotate("text", x = 1:9, y = rep(51.5, 9), label=rep("NS",9), size = 7/ggplot2::.pt) +
   annotate("segment", x = 0.7, xend = 1.3, y = 49, yend = 49, size = 0.5,
            arrow = arrow(ends = "both", length = unit(0, "mm"))) +
@@ -163,7 +163,9 @@ g_text <- ggplot() + theme_void() +
   theme(plot.tag = element_text(size = 12, face = "bold")) +
   coord_cartesian(xlim = c(-1, 1.3), ylim = c(-1.5, 0.5), clip = "off") +
   annotate("text", x=0, y=-0.44, label = "Total reaction time\n(= start time)", size = 7/ggplot2::.pt) +
-  annotate("text", x=-0.85, y=0.3, label = "Warm-up\ntime", size = 7/ggplot2::.pt) + annotate("text", x=0, y=0.3, label = "Signaling time", size = 7/ggplot2::.pt) + annotate("text", x=0.85, y=0.3, label = "Warm-up\ntime", size = 7/ggplot2::.pt) +
+  annotate("text", x=-0.85, y=0.3, label = "Warm-up\ntime", size = 7/ggplot2::.pt) + 
+  annotate("text", x=0, y=0.3, label = "Signal transfer time", size = 7/ggplot2::.pt) + 
+  annotate("text", x=0.85, y=0.3, label = "Warm-up\ntime", size = 7/ggplot2::.pt) +
   annotate("text", x=-1, y=-0.72, label = "Start of \nmicrobeam", size = 7/ggplot2::.pt) + 
   annotate("text", x=1.05, y=-0.79, label = "Start of \nchloroplast\naccumulation", size = 7/ggplot2::.pt)
 
